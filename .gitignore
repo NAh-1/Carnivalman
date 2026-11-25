@@ -5,7 +5,6 @@ coverage/
 .data/
 .playwright-cli/
 .aistudio/
-firebase-applet-config.json
 .DS_Store
 *.log
 .env*
