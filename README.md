@@ -10,17 +10,28 @@ Minimalistic dark queue board, real-time customer Display Mode, sales report, ru
 - **Sales Report & Rush Analytics**: Real revenue metrics, hourly rush chart, 5-day rush matrix, game breakdown, payment split, and CSV export.
 - **Transaction Ledger**: Quick walk-up sales, search, refunds, and CSV export.
 
-## Setup
+## Deploying on Vercel (with Environment Variables)
+
+`firebase-applet-config.json` is gitignored so no config/keys are pushed to GitHub. In your **Vercel Project Settings → Environment Variables**, add:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_DATABASE_ID` (`ai-studio-f466c1fa-6217-4ca3-84c0-615742805033` for the provisioned Firestore database, or `(default)`)
+
+Also ensure **Email/Password** sign-in is enabled in **Firebase Console → Authentication → Sign-in method** and `firestore.rules` is deployed.
+
+## Local Development
 
 1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Configure Firebase:
-   - Update `firebase-applet-config.json` with your Firebase project config if using your own project.
-   - In **Firebase Console → Authentication → Sign-in method**, enable **Email/Password**.
-   - Deploy `firestore.rules` to your Firestore database.
+2. Create `.env.local` from `.env.example` and fill in your `VITE_FIREBASE_*` values (or use a local `firebase-applet-config.json`).
 
 3. Start development server:
    ```bash
@@ -30,7 +41,6 @@ Minimalistic dark queue board, real-time customer Display Mode, sales report, ru
 4. Build for production:
    ```bash
    npm run build
-   npm start
    ```
 
 5. Run tests and typecheck:

@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { Lock } from 'lucide-react';
+import { firebaseConfig } from '../firebase';
 import {
   claimStallWithPassword,
   signInStallWithPassword,
 } from '../services/firestoreStall';
 import type { StallId } from '../types/stall';
 
-const FIREBASE_AUTH_PROVIDERS_URL =
-  'https://console.firebase.google.com/project/fluid-meridian-2wpgt/authentication/providers';
+const FIREBASE_AUTH_PROVIDERS_URL = firebaseConfig.projectId
+  ? `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`
+  : 'https://console.firebase.google.com/';
 
 function mapAuthError(err: unknown): { message: string; needsProviderEnable?: boolean } {
   const code =
