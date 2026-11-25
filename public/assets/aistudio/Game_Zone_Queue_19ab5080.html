@@ -1,0 +1,360 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Game Zone Queue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500..700&family=Rubik:wght@400;600&display=swap">
+<style>
+/* Layout: one column per game on a dark arcade-screen ground, staff controls inside each column, display mode strips them for the public screen. */
+:root{
+  --bg:#0E0B1A; --panel:#1A1433; --panel2:#241C47; --line:#3B3170;
+  --fg:#F1EEFA; --muted:#B9B2D6; --cyan:#3DD9EB; --pink:#FF6FB5; --ink:#0E0B1A;
+  --display:'Oswald','Arial Narrow',Impact,sans-serif;
+  --body:'Rubik',system-ui,Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html.display{font-size:clamp(16px,1.45vw,28px)}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:400 1rem/1.4 var(--body);
+  padding-block:1.25rem 2rem;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+button,input,select{font:inherit}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1.25rem;margin-bottom:1.25rem}
+.brand{display:flex;align-items:baseline;gap:.75rem;margin-right:auto;min-width:0}
+h1{margin:0;font:700 2.4rem/1 var(--display);letter-spacing:.02em}
+.brand span{color:var(--pink);font-weight:600;letter-spacing:.2em;font-size:.8rem}
+.seg{display:flex;gap:.25rem;background:var(--panel);border-radius:1rem;padding:.25rem}
+.seg button{border:0;background:transparent;color:var(--muted);border-radius:.8rem;padding:.4rem .9rem;min-height:44px;cursor:pointer;text-align:left;display:flex;flex-direction:column}
+.seg button b{font-size:1rem;color:inherit}
+.seg button small{font-size:.75rem}
+.seg button[aria-pressed="true"]{background:var(--cyan);color:var(--ink)}
+.tools{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-size:.8rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.25rem .7rem}
+.btn{border:0;border-radius:.7rem;padding:.55rem .95rem;min-height:44px;font-weight:600;cursor:pointer;background:var(--panel2);color:var(--fg)}
+.btn:hover{filter:brightness(1.15)}
+.btn.primary{background:var(--cyan);color:var(--ink)}
+.btn.warn{background:var(--pink);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.only-display{display:none}
+html.display .only-display{display:inline-block}
+html.display .admin{display:none !important}
+
+#stations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:1rem;align-items:start}
+.st{background:var(--panel);border-radius:1.25rem;padding:1.25rem;display:flex;flex-direction:column;gap:1rem;min-width:0}
+.st-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
+.st h2{margin:0;font:700 1.9rem/1.05 var(--display);overflow-wrap:anywhere}
+.gear{color:var(--muted);font-size:.9rem;margin:.25rem 0 0}
+.price{background:var(--pink);color:var(--ink);border-radius:.9rem;padding:.4rem .8rem;text-align:center;font-size:.8rem;font-weight:600;flex:none}
+.price b{display:block;font:700 1.7rem/1 var(--display)}
+.turn{display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.85rem}
+.turn input{width:4.5rem;min-height:44px}
+input[type=text],input[type=number],select{background:var(--bg);color:var(--fg);border:2px solid var(--line);border-radius:.7rem;padding:.5rem .7rem;min-height:44px}
+
+.now{border-radius:1rem;padding:1rem;background:var(--panel2);display:flex;flex-direction:column;gap:.4rem}
+.now.live{background:var(--cyan);color:var(--ink)}
+.now.over{background:var(--pink);color:var(--ink)}
+.now.live .btn,.now.over .btn{background:var(--ink);color:var(--fg)}
+.lbl{font-size:.75rem;font-weight:600;letter-spacing:.2em}
+.who-now{font:700 1.9rem/1.1 var(--display);overflow-wrap:anywhere}
+.timer{font:700 3.2rem/1 var(--display);font-variant-numeric:tabular-nums}
+.now.over .timer{animation:flash 1s steps(2,jump-none) infinite}
+@keyframes flash{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.now.over .timer{animation:none}}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+
+.label2{font-size:.75rem;font-weight:600;letter-spacing:.2em;color:var(--muted);margin:0}
+.q{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.qi{display:grid;grid-template-columns:2rem minmax(0,1fr) auto;gap:.4rem .75rem;align-items:center;background:var(--panel2);border-radius:.9rem;padding:.65rem .8rem}
+.pos{font:700 1.5rem/1 var(--display);color:var(--cyan)}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.sub{color:var(--muted);font-size:.85rem}
+.est{font-size:.85rem;font-weight:600;color:var(--fg);text-align:right;font-variant-numeric:tabular-nums}
+.qi .ctl{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.qi .ctl .btn{min-height:40px;padding:.35rem .7rem;font-size:.9rem}
+.paid{display:flex;align-items:center;gap:.4rem;min-height:40px;cursor:pointer}
+.paid input{width:1.4rem;height:1.4rem;accent-color:var(--cyan)}
+.empty,.more{color:var(--muted);padding:.25rem 0}
+.add{display:flex;flex-wrap:wrap;gap:.5rem}
+.add input[type=text]{flex:1 1 10rem;min-width:0}
+.err{flex-basis:100%;margin:0;min-height:1.2em;color:var(--pink);font-size:.85rem}
+.note{color:var(--muted);font-size:.85rem;margin:1.25rem 0 0;max-width:60ch}
+</style>
+
+<header class="top">
+  <div class="brand"><h1>Game Zone</h1><span>WHO’S NEXT</span></div>
+  <div class="seg admin" role="group" aria-label="Choose lineup">
+    <button type="button" id="plan-A" aria-pressed="true"><b>Plan A</b><small>No Hesi · FC 26 · Rocket League</small></button>
+    <button type="button" id="plan-B" aria-pressed="false"><b>Plan B</b><small>GT7 · WRC Generations · FIFA 23</small></button>
+  </div>
+  <div class="tools">
+    <span class="chip" id="sync" role="status">Saved on this device</span>
+    <button type="button" class="btn admin" id="btn-display">Display mode</button>
+    <button type="button" class="btn admin" id="btn-full">Fullscreen</button>
+    <button type="button" class="btn admin" id="btn-reset">Reset day</button>
+    <button type="button" class="btn only-display" id="btn-exit">Exit display</button>
+  </div>
+</header>
+
+<main id="stations"></main>
+
+<p class="note admin">Open this page on the display laptop and on your phone. While both are online they show the same queues. Tick Paid once the QR scans have gone through, then press Call next when a station frees up.</p>
+
+<script>
+(function(){
+'use strict';
+var PRICE = 5;
+var GAMES = [
+  {id:'nohesi', plan:'A', name:'No Hesi',         gear:'PC + racing wheel',   turn:5, team:false, unit:'per run'},
+  {id:'fc26',   plan:'A', name:'FC 26',           gear:'PS5',                 turn:9, team:true,  unit:'per person'},
+  {id:'rocket', plan:'A', name:'Rocket League',   gear:'Gaming laptop',       turn:6, team:false, unit:'per match'},
+  {id:'gt7',    plan:'B', name:'Gran Turismo 7',  gear:'PS5 + Logitech G29',  turn:5, team:false, unit:'per race'},
+  {id:'wrc',    plan:'B', name:'WRC Generations', gear:'PS5',                 turn:5, team:false, unit:'per race'},
+  {id:'fifa23', plan:'B', name:'FIFA 23',         gear:'PC',                  turn:9, team:true,  unit:'per person'}
+];
+var LS = 'gamezone-queue-v1', LSUI = 'gamezone-ui-v1';
+var Q = {}, ST = {}, ui = {plan:'A', display:false}, db = null;
+
+function lsGet(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function clean(g, d){
+  var out = {now:null, wait:[], turn:g.turn};
+  if(!d || typeof d !== 'object') return out;
+  var t = Number(d.turn); if(t >= 1 && t <= 90) out.turn = Math.round(t);
+  function ent(e){
+    return {id:String(e.id || uid()).slice(0,40), name:String(e.name || '').slice(0,40),
+            party:Math.min(4, Math.max(1, parseInt(e.party,10) || 1)), paid:!!e.paid};
+  }
+  if(d.now && typeof d.now === 'object'){ out.now = ent(d.now); out.now.startedAt = Number(d.now.startedAt) || Date.now(); }
+  if(Array.isArray(d.wait)) out.wait = d.wait.filter(function(e){ return e && typeof e === 'object'; }).slice(0,100).map(ent);
+  return out;
+}
+
+function h(tag, attrs){
+  var e = document.createElement(tag);
+  if(attrs) Object.keys(attrs).forEach(function(k){
+    var v = attrs[k];
+    if(k === 'class') e.className = v;
+    else if(k.indexOf('on') === 0) e.addEventListener(k.slice(2), v);
+    else if(v === true) e.setAttribute(k,'');
+    else if(v !== false && v != null) e.setAttribute(k, v);
+  });
+  for(var i = 2; i < arguments.length; i++){
+    var c = arguments[i];
+    if(c == null || c === false) continue;
+    e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return e;
+}
+
+function setSync(mode){
+  document.getElementById('sync').textContent = mode === 'live' ? 'Synced across devices' : 'Saved on this device only';
+}
+
+function save(g){
+  lsSet(LS, Q);
+  if(db){ try { db.doc('queues/' + g.id).set(Q[g.id]).catch(function(){ setSync('local'); }); } catch(e){ setSync('local'); } }
+}
+function commit(g){ renderStation(g); save(g); }
+
+function fmt(sec){
+  sec = Math.max(0, Math.ceil(sec));
+  var m = Math.floor(sec / 60), s = sec % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function callNext(g){
+  var q = Q[g.id], e = q.wait.shift();
+  if(!e) return;
+  q.now = {id:e.id, name:e.name, party:e.party, paid:e.paid, startedAt:Date.now()};
+  commit(g);
+}
+function finish(g, next){
+  var q = Q[g.id];
+  q.now = null;
+  if(next && q.wait.length){ callNext(g); return; }
+  commit(g);
+}
+function addEntry(g, nameIn, party, err){
+  var name = nameIn.value.trim();
+  if(!name){ err.textContent = 'Type a name first.'; nameIn.focus(); return; }
+  err.textContent = '';
+  var n = party ? parseInt(party.value,10) || 1 : 1;
+  Q[g.id].wait.push({id:uid(), name:name.slice(0,40), party:n, paid:false});
+  nameIn.value = '';
+  if(party) party.value = '1';
+  commit(g);
+  nameIn.focus();
+}
+
+function build(){
+  var main = document.getElementById('stations');
+  GAMES.forEach(function(g){
+    var turnIn = h('input', {id:'turn-' + g.id, type:'number', min:1, max:90, value:Q[g.id].turn,
+      onchange:function(ev){ var v = parseInt(ev.target.value,10); if(v >= 1 && v <= 90){ Q[g.id].turn = v; commit(g); } else { ev.target.value = Q[g.id].turn; } }});
+    var nameIn = h('input', {id:'name-' + g.id, type:'text', maxlength:40, placeholder:'Player or group name', autocomplete:'off', 'aria-label':'Name for ' + g.name});
+    var party = g.team ? h('select', {id:'party-' + g.id, 'aria-label':'Number of players'},
+      [1,2,3,4].map(function(n){ return h('option', {value:n}, n === 1 ? '1 player' : n + ' players'); })) : null;
+    var err = h('p', {class:'err', role:'status'});
+    var form = h('form', {class:'add admin', onsubmit:function(ev){ ev.preventDefault(); addEntry(g, nameIn, party, err); }},
+      nameIn, party, h('button', {class:'btn primary', type:'submit'}, 'Add to queue'), err);
+    var now = h('div', {class:'now'});
+    var list = h('ul', {class:'q'});
+    var sec = h('section', {class:'st', id:'st-' + g.id, 'aria-label':g.name},
+      h('div', {class:'st-head'},
+        h('div', null, h('h2', null, g.name), h('p', {class:'gear'}, g.gear)),
+        h('div', {class:'price'}, h('b', null, PRICE + ' QR'), g.unit)),
+      now,
+      h('p', {class:'label2'}, 'UP NEXT'),
+      list,
+      form,
+      h('label', {class:'turn admin', for:'turn-' + g.id}, 'Minutes per turn', turnIn));
+    ST[g.id] = {el:sec, now:now, list:list, turn:turnIn};
+    main.append(sec);
+  });
+}
+
+function renderStation(g){
+  var q = Q[g.id], s = ST[g.id];
+  if(document.activeElement !== s.turn) s.turn.value = q.turn;
+  var n = s.now;
+  n.className = 'now' + (q.now ? ' live' : '');
+  n.replaceChildren();
+  if(q.now){
+    n.append(
+      h('span', {class:'lbl'}, 'NOW PLAYING'),
+      h('div', {class:'who-now'}, q.now.name + (g.team && q.now.party > 1 ? ' ×' + q.now.party : '')),
+      h('div', {class:'timer', 'data-timer':g.id}, fmt(q.turn * 60)),
+      h('div', {class:'actions admin'},
+        h('button', {class:'btn', type:'button', onclick:function(){ finish(g,false); }}, 'Finish turn'),
+        q.wait.length ? h('button', {class:'btn', type:'button', onclick:function(){ finish(g,true); }}, 'Finish and call next') : null));
+  } else {
+    n.append(
+      h('span', {class:'lbl'}, 'FREE'),
+      h('div', {class:'who-now'}, q.wait.length ? 'Next: ' + q.wait[0].name : 'Step up and play'),
+      h('div', {class:'actions admin'},
+        h('button', {class:'btn primary', type:'button', disabled:!q.wait.length, onclick:function(){ callNext(g); }}, 'Call next')));
+  }
+  var ul = s.list;
+  ul.replaceChildren();
+  var limit = ui.display ? 6 : 100;
+  if(!q.wait.length) ul.append(h('li', {class:'empty'}, ui.display ? 'Nobody waiting.' : 'Nobody waiting. Add the first name below.'));
+  q.wait.slice(0, limit).forEach(function(e, i){
+    var due = PRICE * (g.team ? e.party : 1);
+    var partyText = g.team && e.party > 1 ? e.party + ' players' : '';
+    ul.append(h('li', {class:'qi'},
+      h('span', {class:'pos'}, i + 1),
+      h('div', null,
+        h('div', {class:'nm'}, e.name),
+        h('div', {class:'sub'}, partyText,
+          h('span', {class:'admin'}, (partyText ? ' · ' : '') + 'due ' + due + ' QR' + (e.paid ? ' (paid)' : ' (not paid yet)')))),
+      h('span', {class:'est', 'data-est':i}),
+      h('div', {class:'ctl admin'},
+        h('label', {class:'paid'},
+          h('input', {type:'checkbox', id:'paid-' + g.id + '-' + e.id, checked:e.paid, onchange:function(ev){ e.paid = ev.target.checked; commit(g); }}),
+          'Paid'),
+        i > 0 ? h('button', {class:'btn', type:'button', onclick:function(){
+          var w = Q[g.id].wait, k = w.findIndex(function(x){ return x.id === e.id; });
+          if(k > 0){ var t = w[k-1]; w[k-1] = w[k]; w[k] = t; commit(g); }
+        }}, 'Move up') : null,
+        h('button', {class:'btn', type:'button', onclick:function(){
+          Q[g.id].wait = Q[g.id].wait.filter(function(x){ return x.id !== e.id; }); commit(g);
+        }}, 'Remove'))));
+  });
+  if(q.wait.length > limit) ul.append(h('li', {class:'more'}, '+' + (q.wait.length - limit) + ' more waiting'));
+  tick();
+}
+
+function tick(){
+  var nowMs = Date.now();
+  GAMES.forEach(function(g){
+    var q = Q[g.id], s = ST[g.id], rem = 0;
+    if(q.now){
+      rem = q.turn * 60 - (nowMs - q.now.startedAt) / 1000;
+      var t = s.now.querySelector('[data-timer]');
+      if(t){
+        if(rem >= 0){ t.textContent = fmt(rem); s.now.classList.remove('over'); }
+        else { t.textContent = 'TIME’S UP'; s.now.classList.add('over'); }
+      }
+    }
+    s.list.querySelectorAll('[data-est]').forEach(function(el){
+      var i = Number(el.getAttribute('data-est'));
+      if(i === 0 && !q.now){ el.textContent = 'Up next'; return; }
+      var sec = (q.now ? Math.max(0, rem) : 0) + i * q.turn * 60;
+      el.textContent = '~' + Math.max(1, Math.ceil(sec / 60)) + ' min';
+    });
+  });
+}
+
+function setPlan(p){
+  ui.plan = p; lsSet(LSUI, ui);
+  GAMES.forEach(function(g){ ST[g.id].el.hidden = g.plan !== p; });
+  ['A','B'].forEach(function(k){ document.getElementById('plan-' + k).setAttribute('aria-pressed', String(k === p)); });
+}
+function setDisplay(on){
+  ui.display = on; lsSet(LSUI, ui);
+  document.documentElement.classList.toggle('display', on);
+  GAMES.forEach(renderStation);
+}
+
+var armed = false, armTimer = null;
+function disarm(){
+  armed = false; clearTimeout(armTimer);
+  var b = document.getElementById('btn-reset');
+  b.textContent = 'Reset day'; b.classList.remove('warn');
+}
+
+function connect(){
+  Promise.resolve().then(function(){
+    if(!window.claude || !window.claude.use) return null;
+    return window.claude.use('db');
+  }).then(function(d){
+    db = d || null;
+    if(!db){ setSync('local'); return; }
+    db.collection('queues').onSnapshot(function(snap){
+      snap.docs.forEach(function(doc){
+        var g = GAMES.find(function(x){ return x.id === doc.id; });
+        if(!g || !doc.exists) return;
+        Q[g.id] = clean(g, doc.data());
+        renderStation(g);
+      });
+      lsSet(LS, Q);
+      setSync('live');
+    }, function(){ setSync('local'); });
+  }).catch(function(){ db = null; setSync('local'); });
+}
+
+function init(){
+  var saved = lsGet(LS), u = lsGet(LSUI);
+  GAMES.forEach(function(g){ Q[g.id] = clean(g, saved && saved[g.id]); });
+  if(u && (u.plan === 'A' || u.plan === 'B')) ui.plan = u.plan;
+  if(u && u.display) ui.display = true;
+  build();
+  document.getElementById('plan-A').addEventListener('click', function(){ setPlan('A'); });
+  document.getElementById('plan-B').addEventListener('click', function(){ setPlan('B'); });
+  document.getElementById('btn-display').addEventListener('click', function(){ setDisplay(true); });
+  document.getElementById('btn-exit').addEventListener('click', function(){ setDisplay(false); });
+  document.getElementById('btn-full').addEventListener('click', function(){
+    try { var r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if(r && r.catch) r.catch(function(){}); } catch(e){}
+  });
+  document.getElementById('btn-reset').addEventListener('click', function(){
+    var b = document.getElementById('btn-reset');
+    if(!armed){ armed = true; b.textContent = 'Tap again to clear all queues'; b.classList.add('warn'); armTimer = setTimeout(disarm, 4000); return; }
+    disarm();
+    GAMES.forEach(function(g){ Q[g.id] = {now:null, wait:[], turn:Q[g.id].turn}; commit(g); });
+  });
+  document.documentElement.classList.toggle('display', ui.display);
+  GAMES.forEach(renderStation);
+  setPlan(ui.plan);
+  setInterval(tick, 1000);
+  connect();
+}
+init();
+})();
+</script>
+
+</body></html>

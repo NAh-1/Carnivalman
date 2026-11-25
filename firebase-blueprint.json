@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "Stall": {
+      "title": "Stall",
+      "description": "Private gaming stall configuration owned strictly by its authenticated operator.",
+      "type": "object",
+      "properties": {
+        "stallId": {
+          "type": "string",
+          "enum": ["rushbox", "gamingzone"]
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5
+        },
+        "dailyGoal": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["stallId", "ownerId", "displayName", "currency", "dailyGoal", "createdAt", "updatedAt"]
+    },
+    "GameStation": {
+      "title": "GameStation",
+      "description": "Editable game station, pricing, turn duration, and active player slot for a stall.",
+      "type": "object",
+      "properties": {
+        "stallId": {
+          "type": "string",
+          "enum": ["rushbox", "gamingzone"]
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "gear": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "price": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "turn": {
+          "type": "integer"
+        },
+        "team": {
+          "type": "boolean"
+        },
+        "sortOrder": {
+          "type": "number"
+        },
+        "now": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["stallId", "ownerId", "name", "gear", "price", "unit", "turn", "team", "sortOrder", "now", "createdAt", "updatedAt"]
+    },
+    "QueueEntry": {
+      "title": "QueueEntry",
+      "description": "Waiting customer or group entry in a specific game station queue.",
+      "type": "object",
+      "properties": {
+        "stallId": {
+          "type": "string",
+          "enum": ["rushbox", "gamingzone"]
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "gameId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "party": {
+          "type": "integer"
+        },
+        "paid": {
+          "type": "boolean"
+        },
+        "saleId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "position": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["stallId", "ownerId", "gameId", "name", "party", "paid", "saleId", "position", "createdAt", "updatedAt"]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "Individual customer visit and payment record for a stall.",
+      "type": "object",
+      "properties": {
+        "stallId": {
+          "type": "string",
+          "enum": ["rushbox", "gamingzone"]
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerLabel": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "partySize": {
+          "type": "integer"
+        },
+        "items": {
+          "type": "array"
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["cash", "card", "mobile"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["completed", "refunded"]
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["stallId", "ownerId", "customerLabel", "partySize", "items", "totalAmount", "paymentMethod", "status", "occurredAt", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/stalls/{stallId}": {
+      "schema": {
+        "$ref": "#/entities/Stall"
+      },
+      "description": "Private stall configuration for rushbox and gamingzone."
+    },
+    "/stalls/{stallId}/games/{gameId}": {
+      "schema": {
+        "$ref": "#/entities/GameStation"
+      },
+      "description": "Editable game stations, prices, turn times, and current active player."
+    },
+    "/stalls/{stallId}/games/{gameId}/queue/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/QueueEntry"
+      },
+      "description": "Real-time customer queue entries for a game station."
+    },
+    "/stalls/{stallId}/sales/{saleId}": {
+      "schema": {
+        "$ref": "#/entities/SaleRecord"
+      },
+      "description": "Real customer sales transactions and refunds for a stall."
+    }
+  }
+}

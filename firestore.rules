@@ -1,0 +1,220 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isStallAccount(stallId) {
+      return isSignedIn()
+        && stallId in ['rushbox', 'gamingzone']
+        && request.auth.token.email == (stallId + '@stall.local');
+    }
+
+    function isStallOwner(stallId) {
+      return isStallAccount(stallId)
+        && isValidId(stallId)
+        && exists(/databases/$(database)/documents/stalls/$(stallId))
+        && get(/databases/$(database)/documents/stalls/$(stallId)).data.ownerId == request.auth.uid;
+    }
+
+    function isGameOwner(stallId, gameId) {
+      return isStallOwner(stallId)
+        && isValidId(gameId)
+        && exists(/databases/$(database)/documents/stalls/$(stallId)/games/$(gameId));
+    }
+
+    // Entity Validators (Anti-Update-Gap)
+    function isValidStall(data, stallId) {
+      return data.keys().hasAll(['stallId', 'ownerId', 'displayName', 'currency', 'dailyGoal', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['stallId', 'ownerId', 'displayName', 'currency', 'dailyGoal', 'createdAt', 'updatedAt'])
+        && data.stallId is string && data.stallId == stallId && data.stallId in ['rushbox', 'gamingzone']
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 40
+        && data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 5
+        && data.dailyGoal is number && data.dailyGoal >= 0 && data.dailyGoal <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidActiveNow(nowEntry) {
+      return nowEntry is map
+        && nowEntry.keys().hasAll(['id', 'name', 'party', 'paid', 'saleId', 'startedAt'])
+        && nowEntry.keys().hasOnly(['id', 'name', 'party', 'paid', 'saleId', 'startedAt'])
+        && isValidId(nowEntry.id)
+        && nowEntry.name is string && nowEntry.name.size() >= 1 && nowEntry.name.size() <= 40
+        && nowEntry.party is int && nowEntry.party >= 1 && nowEntry.party <= 4
+        && nowEntry.paid is bool
+        && nowEntry.saleId is string && nowEntry.saleId.size() <= 128
+        && nowEntry.startedAt is int && nowEntry.startedAt > 0;
+    }
+
+    function isValidGameStation(data, stallId) {
+      return data.keys().hasAll(['stallId', 'ownerId', 'name', 'gear', 'price', 'unit', 'turn', 'team', 'sortOrder', 'now', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['stallId', 'ownerId', 'name', 'gear', 'price', 'unit', 'turn', 'team', 'sortOrder', 'now', 'createdAt', 'updatedAt'])
+        && data.stallId is string && data.stallId == stallId && data.stallId in ['rushbox', 'gamingzone']
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && data.gear is string && data.gear.size() >= 1 && data.gear.size() <= 50
+        && data.price is number && data.price >= 0 && data.price <= 10000
+        && data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 20
+        && data.turn is int && data.turn >= 1 && data.turn <= 90
+        && data.team is bool
+        && data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000000000000
+        && (data.now == null || isValidActiveNow(data.now))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQueueEntry(data, stallId, gameId) {
+      return data.keys().hasAll(['stallId', 'ownerId', 'gameId', 'name', 'party', 'paid', 'saleId', 'position', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['stallId', 'ownerId', 'gameId', 'name', 'party', 'paid', 'saleId', 'position', 'createdAt', 'updatedAt'])
+        && data.stallId is string && data.stallId == stallId && data.stallId in ['rushbox', 'gamingzone']
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.gameId is string && data.gameId == gameId && isValidId(data.gameId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 40
+        && data.party is int && data.party >= 1 && data.party <= 4
+        && data.paid is bool
+        && data.saleId is string && data.saleId.size() <= 128
+        && data.position is number && data.position >= 0 && data.position <= 100000000000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSaleRecord(data, stallId) {
+      return data.keys().hasAll(['stallId', 'ownerId', 'customerLabel', 'partySize', 'items', 'totalAmount', 'paymentMethod', 'status', 'occurredAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['stallId', 'ownerId', 'customerLabel', 'partySize', 'items', 'totalAmount', 'paymentMethod', 'status', 'occurredAt', 'createdAt', 'updatedAt'])
+        && data.stallId is string && data.stallId == stallId && data.stallId in ['rushbox', 'gamingzone']
+        && data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId)
+        && data.customerLabel is string && data.customerLabel.size() <= 60
+        && data.partySize is int && data.partySize >= 1 && data.partySize <= 50
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 20
+        && data.items[0] is map
+        && data.items[0].keys().hasAll(['itemId', 'name', 'qty', 'unitPrice'])
+        && data.items[0].keys().hasOnly(['itemId', 'name', 'qty', 'unitPrice'])
+        && data.items[0].itemId is string && data.items[0].itemId.size() >= 1 && data.items[0].itemId.size() <= 128
+        && data.items[0].name is string && data.items[0].name.size() >= 1 && data.items[0].name.size() <= 60
+        && data.items[0].qty is int && data.items[0].qty >= 1 && data.items[0].qty <= 100
+        && data.items[0].unitPrice is number && data.items[0].unitPrice >= 0 && data.items[0].unitPrice <= 10000
+        && data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 100000
+        && data.paymentMethod is string && data.paymentMethod in ['cash', 'card', 'mobile']
+        && data.status is string && data.status in ['completed', 'refunded']
+        && data.occurredAt is timestamp
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Stalls Collection (Strictly isolated to stall owner)
+    match /stalls/{stallId} {
+      allow get: if isStallAccount(stallId) && isValidId(stallId) && (resource == null || existing().ownerId == request.auth.uid);
+      allow list: if isStallAccount(stallId) && existing().ownerId == request.auth.uid && existing().stallId == stallId;
+      allow create: if isStallAccount(stallId)
+        && isValidId(stallId)
+        && isValidStall(incoming(), stallId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isStallAccount(stallId)
+        && isValidId(stallId)
+        && existing().ownerId == request.auth.uid
+        && isValidStall(incoming(), stallId)
+        && incoming().stallId == existing().stallId
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'currency', 'dailyGoal', 'updatedAt']);
+      allow delete: if false;
+
+      // Editable Game Stations + Active Turn Slot
+      match /games/{gameId} {
+        allow get: if isValidId(gameId) && isStallOwner(stallId);
+        allow list: if isStallAccount(stallId) && existing().ownerId == request.auth.uid && existing().stallId == stallId;
+        allow create: if isStallOwner(stallId)
+          && isValidId(gameId)
+          && isValidGameStation(incoming(), stallId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isStallOwner(stallId)
+          && isValidId(gameId)
+          && isValidGameStation(incoming(), stallId)
+          && incoming().stallId == existing().stallId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'gear', 'price', 'unit', 'turn', 'team', 'sortOrder', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['turn', 'updatedAt']) ||
+            incoming().diff(existing()).affectedKeys().hasOnly(['now', 'updatedAt'])
+          );
+        allow delete: if isValidId(gameId) && isStallOwner(stallId);
+
+        // Waiting Queue Entries
+        match /queue/{entryId} {
+          allow get: if isValidId(entryId) && isGameOwner(stallId, gameId);
+          allow list: if isStallAccount(stallId) && existing().ownerId == request.auth.uid && existing().stallId == stallId;
+          allow create: if isGameOwner(stallId, gameId)
+            && isValidId(entryId)
+            && isValidQueueEntry(incoming(), stallId, gameId)
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time;
+          allow update: if isGameOwner(stallId, gameId)
+            && isValidId(entryId)
+            && isValidQueueEntry(incoming(), stallId, gameId)
+            && incoming().stallId == existing().stallId
+            && incoming().ownerId == existing().ownerId
+            && incoming().gameId == existing().gameId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (
+              incoming().diff(existing()).affectedKeys().hasOnly(['paid', 'saleId', 'updatedAt']) ||
+              incoming().diff(existing()).affectedKeys().hasOnly(['position', 'updatedAt'])
+            );
+          allow delete: if isValidId(entryId) && isGameOwner(stallId, gameId);
+        }
+      }
+
+      // Real Customer Sales Subcollection
+      match /sales/{saleId} {
+        allow get: if isValidId(saleId) && isStallOwner(stallId);
+        allow list: if isStallAccount(stallId) && existing().ownerId == request.auth.uid && existing().stallId == stallId;
+        allow create: if isStallOwner(stallId)
+          && isValidId(saleId)
+          && isValidSaleRecord(incoming(), stallId)
+          && incoming().status == 'completed'
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isStallOwner(stallId)
+          && isValidId(saleId)
+          && isValidSaleRecord(incoming(), stallId)
+          && existing().status != 'refunded'
+          && incoming().stallId == existing().stallId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (incoming().status == 'refunded' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+            (incoming().status == existing().status && incoming().diff(existing()).affectedKeys().hasOnly(['customerLabel', 'partySize', 'paymentMethod', 'updatedAt']))
+          );
+        allow delete: if isValidId(saleId) && isStallOwner(stallId);
+      }
+    }
+  }
+}
